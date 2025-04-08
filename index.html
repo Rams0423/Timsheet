@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weekly Timesheet</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    input[type="number"] { width: 60px; }
+  </style>
+</head>
+<body>
+  <h2>Weekly Timesheet</h2>
+  <label>Customer Name: <input type="text" id="customerName" /></label>
+  <br /><br />
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Non-Urgent (MSD/Calls/Labs)</th>
+        <th>Urgent/Escalations</th>
+      </tr>
+    </thead>
+    <tbody id="timesheetBody">
+      <tr><td>Platinum</td><td><input type="number" /></td><td><input type="number" /></td></tr>
+      <tr><td>Gold</td><td><input type="number" /></td><td><input type="number" /></td></tr>
+      <tr><td>Silver</td><td><input type="number" /></td><td><input type="number" /></td></tr>
+      <tr><td>NPI</td><td><input type="number" /></td><td><input type="number" /></td></tr>
+      <tr><td>Everything else</td><td><input type="number" /></td><td><input type="number" /></td></tr>
+    </tbody>
+  </table>
+  <button onclick="saveEntry()">Save Entry</button>
+  <button onclick="submitForm()">Submit Form</button>
+  <button onclick="downloadExcel()">Download Merged Excel</button>
+
+  <script>
+    let allData = [];
+
+    function saveEntry() {
+      const name = document.getElementById("customerName").value.trim();
+      if (!name) return alert("Enter customer name");
+
+      const rows = document.querySelectorAll("#timesheetBody tr");
+      const entry = { Name: name };
+      rows.forEach(row => {
+        const category = row.cells[0].innerText;
+        const nonUrgent = row.cells[1].querySelector("input").value || 0;
+        const urgent = row.cells[2].querySelector("input").value || 0;
+        entry[`${category} - Non-Urgent`] = parseFloat(nonUrgent);
+        entry[`${category} - Urgent`] = parseFloat(urgent);
+      });
+      allData.push(entry);
+      alert("Saved! You can add another customer now.");
+      document.getElementById("customerName").value = "";
+      document.querySelectorAll("#timesheetBody input").forEach(input => input.value = "");
+    }
+
+    function downloadExcel() {
+      if (allData.length === 0) return alert("No data to export");
+      const worksheet = XLSX.utils.json_to_sheet(allData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Timesheet");
+      XLSX.writeFile(workbook, "Merged_Timesheet.xlsx");
+    }
+
+    async function submitForm() {
+      if (allData.length === 0) return alert("No data to submit");
+      try {
+        const response = await fetch("https://your-backend-url.com/api/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(allData),
+        });
+
+        if (response.ok) {
+          alert("Form data submitted successfully!");
+        } else {
+          alert("Failed to submit form data!");
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        alert("An error occurred while submitting the form.");
+      }
+    }
+  </script>
+</body>
+</html>
